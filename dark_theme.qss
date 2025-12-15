@@ -1,0 +1,51 @@
+
+QMainWindow {
+    background-color: #1e1e1e;
+}
+QPlainTextEdit {
+    color: #dddddd;
+    background-color: #1e1e1e;
+    border: none;
+    font-family: Consolas, monospace;
+    font-size: 20px;
+}
+QToolBar {
+    background: #252526;
+    spacing: 8px;
+    padding: 4px;
+}
+QToolButton {
+    color: #cccccc;
+    padding: 6px 10px;
+    background: #2d2d2d;
+    border-radius: 6px;
+}
+QToolButton:hover {
+    background: #3a3a3a;
+}
+
+/* Menu bar and menus */
+QMenuBar {
+    background-color: #252526; /* match toolbar */
+    color: #cccccc;
+}
+QMenuBar::item {
+    background: transparent;
+    padding: 6px 10px;
+    margin: 0 2px;
+}
+QMenuBar::item:selected {
+    background: #3a3a3a;
+    color: #ffffff;
+}
+
+QMenu {
+    background-color: #2d2d2d;
+    color: #e5e5e5;
+    border: 1px solid #3a3a3a;
+}
+QMenu::item:selected {
+    background-color: #3a3a3a;
+    color: #ffffff;
+}
+
