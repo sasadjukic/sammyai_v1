@@ -9,6 +9,8 @@ import ollama
 # Use a package-relative import so importing `llm.client` works when the package
 # is loaded as `llm` (avoids ModuleNotFoundError when running from project root)
 from .system_prompt import SYSTEM_PROMPT
+# Import API key manager so we can pick up a stored key by default
+from api_key_manager import APIKeyManager
 
 
 # Model configuration
@@ -226,7 +228,10 @@ class LLMConfig:
             system_prompt: Custom system prompt (defaults to SYSTEM_PROMPT)
         """
         self.model_key = model_key or self.DEFAULT_MODELS[ModelType.LOCAL]
-        self.api_key = api_key
+        # If an API key is not provided explicitly, attempt to load a stored key
+        # from the application's API key manager. This ensures UI-level API key
+        # configuration is respected when creating cloud model clients.
+        self.api_key = api_key or APIKeyManager.load_api_key()
         self.max_tokens = max_tokens
         self.temperature = temperature
         self.top_p = top_p

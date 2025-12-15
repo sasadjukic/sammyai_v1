@@ -846,7 +846,39 @@ class TextEditor(QMainWindow):
     def _on_configure_api_key(self):
         """Open the API key configuration dialog."""
         dialog = APIKeyDialog(self)
+        # Run the dialog; after it closes, pick up the stored key and refresh
+        # the LLM configuration so cloud model selection can succeed.
         dialog.exec()
+
+        try:
+            # Load whatever key is currently stored (may be empty if cleared)
+            key = APIKeyManager.load_api_key()
+            # Update the active LLM configuration
+            if hasattr(self, "llm_config") and self.llm_config is not None:
+                self.llm_config.api_key = key
+
+                # Try to re-create the client so any errors surface immediately
+                try:
+                    new_client = self.llm_config.create_client()
+                    self.llm_client = new_client
+                    if self.chat_panel:
+                        self.chat_panel.add_system_message("API key configured. LLM client refreshed.")
+                    try:
+                        self.statusBar().showMessage("API key configured", 3000)
+                    except Exception:
+                        pass
+                except Exception as e:
+                    # If creating the client fails (e.g., no API key for cloud model), keep
+                    # the previous client (if any) and inform the user via the chat panel
+                    if self.chat_panel:
+                        self.chat_panel.add_system_message(f"Failed to refresh LLM client: {e}")
+                    try:
+                        self.statusBar().showMessage(f"Failed to refresh LLM client: {e}", 5000)
+                    except Exception:
+                        pass
+        except Exception:
+            # Non-fatal: do not crash the settings dialog
+            pass
 
     # --- File operations ---
     def open_file(self):
