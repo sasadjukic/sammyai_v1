@@ -203,6 +203,11 @@ class TextEditor(QMainWindow):
             # Fall back to in-memory manager
             self.chat_manager = ChatManager()
 
+        # Load existing sessions and ensure an active one exists
+        self.chat_manager.load_all_sessions()
+        if not self.chat_manager.get_active_session():
+            self.chat_manager.create_session()
+
         # Create default LLM client via LLMConfig; handle initialization errors gracefully
         try:
             self.llm_config = LLMConfig()

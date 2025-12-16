@@ -24,7 +24,7 @@ class ChatPanel(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setMinimumWidth(300)
-        self.setMaximumWidth(800)
+        self.setMaximumWidth(1000)
         self.setup_ui()
     
     def setup_ui(self):
