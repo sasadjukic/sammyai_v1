@@ -8,7 +8,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtGui import QAction, QKeySequence, QIcon, QPainter, QColor, QFont, QTextFormat, QPalette, QTextCursor, QPixmap
 from PySide6.QtSvg import QSvgRenderer
-from PySide6.QtCore import Qt, QRect, QSize, QTimer
+from PySide6.QtCore import Qt, QRect, QSize, QTimer, Signal, Slot
 import threading
 from PySide6.QtWidgets import QSizePolicy
 from PySide6.QtWidgets import QApplication, QStyle, QTextEdit
@@ -141,6 +141,11 @@ class SearchWidget(QWidget):
 
 class TextEditor(QMainWindow):
 
+    
+    # Signals for thread-safe LLM communication
+    llm_response_received = Signal(str)
+    llm_error_occurred = Signal(str)
+
     def __init__(self):
         super().__init__()
 
@@ -207,6 +212,10 @@ class TextEditor(QMainWindow):
             self.llm_client = None
             # Non-fatal; show status so user knows LLM features aren't ready
             self.statusBar().showMessage(f"LLM client not initialized: {e}")
+
+        # Connect LLM signals
+        self.llm_response_received.connect(self._handle_llm_response)
+        self.llm_error_occurred.connect(self._handle_llm_error)
 
         # Chat panel (created lazily when the agent button is pressed)
         self.chat_dock: QDockWidget | None = None
@@ -761,13 +770,25 @@ class TextEditor(QMainWindow):
                 except Exception:
                     pass
 
-                # Append assistant message on main thread
-                QTimer.singleShot(0, lambda: self.chat_panel.add_assistant_message(reply) if self.chat_panel else None)
+                # Emit signal to update UI on main thread
+                self.llm_response_received.emit(reply)
             except Exception as e:
-                QTimer.singleShot(0, lambda: self.chat_panel.add_system_message(f"LLM error: {e}") if self.chat_panel else None)
+                self.llm_error_occurred.emit(str(e))
 
         t = threading.Thread(target=worker, daemon=True)
         t.start()
+    
+    @Slot(str)
+    def _handle_llm_response(self, reply: str):
+        """Handle successful LLM response on main thread."""
+        if self.chat_panel:
+            self.chat_panel.add_assistant_message(reply)
+            
+    @Slot(str)
+    def _handle_llm_error(self, error_msg: str):
+        """Handle LLM error on main thread."""
+        if self.chat_panel:
+            self.chat_panel.add_system_message(f"LLM error: {error_msg}")
 
     def _on_model_selected(self, model_key: str):
         """Handle a model selection change from the UI.
