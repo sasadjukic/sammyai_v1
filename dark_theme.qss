@@ -49,3 +49,22 @@ QMenu::item:selected {
     color: #ffffff;
 }
 
+/* Dock Widget styling */
+QDockWidget {
+    color: #dddddd;
+    titlebar-close-icon: url(icons/close.svg);
+}
+
+QDockWidget::close-button, QDockWidget::float-button {
+    background-color: transparent;
+    padding: 4px;
+    icon-size: 32px; /* Doubled from default ~16px */
+    width: 40px;
+    height: 40px;
+    border-radius: 4px;
+}
+
+QDockWidget::close-button:hover, QDockWidget::float-button:hover {
+    background-color: #3e3e3e;
+}
+
