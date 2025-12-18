@@ -191,7 +191,7 @@ class ChatPanel(QWidget):
     def add_user_message(self, message: str):
         """Add a user message to the chat display."""
         self.chat_display.append(f"<div style='margin-bottom: 10px;'>"
-                                 f"<b style='color: #4A90E2;'>You:</b><br>"
+                                 f"<b style='color: #3EE07B;'>You:</b><br>"
                                  f"<span style='color: #dddddd;'>{self._escape_html(message)}</span>"
                                  f"</div>")
         self._scroll_to_bottom()
@@ -199,7 +199,7 @@ class ChatPanel(QWidget):
     def add_assistant_message(self, message: str):
         """Add an assistant message to the chat display."""
         self.chat_display.append(f"<div style='margin-bottom: 10px;'>"
-                                 f"<b style='color: #50C878;'>Sammy:</b><br>"
+                                 f"<b style='color: #4F91F7;'>Sammy:</b><br>"
                                  f"<span style='color: #dddddd;'>{self._escape_html(message)}</span>"
                                  f"</div>")
         self._scroll_to_bottom()
