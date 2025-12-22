@@ -130,9 +130,15 @@ class VectorStore:
         query_list = query_embedding.tolist() if isinstance(query_embedding, np.ndarray) else query_embedding
         
         try:
+            # Check if collection is empty
+            count = self.collection.count()
+            if count == 0:
+                print("Collection is empty, returning no results")
+                return [], [], [], []
+                
             results = self.collection.query(
                 query_embeddings=[query_list],
-                n_results=min(top_k, self.collection.count()),
+                n_results=min(top_k, count),
                 where=where
             )
             
@@ -181,7 +187,7 @@ class VectorStore:
                 self.collection.delete(ids=results['ids'])
                 print(f"Deleted {len(results['ids'])} chunks from {file_path}")
             else:
-                print(f"No chunks found for {file_path}")
+                print(f"No existing chunks found to delete for {file_path}")
                 
         except Exception as e:
             print(f"Error deleting file chunks: {e}")

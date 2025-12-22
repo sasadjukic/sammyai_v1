@@ -201,7 +201,10 @@ class FileIndexer:
         # Chunk the content
         chunks = self.chunk_text(content, metadata)
         
-        print(f"Indexed {file_path}: {len(chunks)} chunks created")
+        if not chunks:
+             print(f"Warning: No chunks generated from {file_path}")
+        else:
+             print(f"Indexed {file_path}: {len(chunks)} chunks created")
         return chunks
     
     def index_directory(self, directory_path: str, recursive: bool = True) -> List[Document]:

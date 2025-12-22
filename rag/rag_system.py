@@ -107,6 +107,7 @@ class RAGSystem:
                 self.vector_store.delete_by_file(file_path)
             
             # Step 1: Parse and chunk the file
+            print(f"Parsing and chunking {file_path}...")
             chunks = self.indexer.index_file(file_path)
             if not chunks:
                 print(f"No chunks created for {file_path}")
