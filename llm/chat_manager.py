@@ -175,6 +175,7 @@ class ChatManager:
         self.active_session_id: Optional[str] = None
         self.storage_dir = storage_dir
         self.rag_system = rag_system
+        self.cin_context: Optional[str] = None
         
         if storage_dir:
             Path(storage_dir).mkdir(parents=True, exist_ok=True)
@@ -371,6 +372,21 @@ class ChatManager:
             except Exception as e:
                 # If RAG fails, continue without context
                 print(f"RAG context retrieval failed: {e}")
+
+        # If CIN context is available, retrieve and inject context
+        if self.cin_context:
+            cin_message = {
+                "role": "system",
+                "content": f"Here is an injected file context (via CIN):\n\n{self.cin_context}\n\nUse this context if relevant to the user query."
+            }
+            # Insert CIN context after system messages
+            insert_pos = 0
+            for i, msg in enumerate(messages):
+                if msg.get("role") == "system":
+                    insert_pos = i + 1
+                else:
+                    break
+            messages.insert(insert_pos, cin_message)
         
         return messages
 

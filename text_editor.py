@@ -357,6 +357,15 @@ class TextEditor(QMainWindow):
         self.index_action.triggered.connect(self._index_current_file_manually)
         self.index_action.setStatusTip("Index current file for AI assistant context")
 
+        # CIN actions
+        self.upload_cin_action = QAction("Upload File for CIN", self)
+        self.upload_cin_action.triggered.connect(self._upload_cin_file)
+        self.upload_cin_action.setStatusTip("Upload a small file (< 50kB) for direct context injection")
+
+        self.clear_cin_action = QAction("Clear CIN Context", self)
+        self.clear_cin_action.triggered.connect(self._clear_cin_context)
+        self.clear_cin_action.setStatusTip("Clear the current CIN injected context")
+
     def _load_icon(self, theme_name, fallback):
         icon = QIcon.fromTheme(theme_name)
         if not icon or icon.isNull():
@@ -517,6 +526,11 @@ class TextEditor(QMainWindow):
         rag_stats_action = QAction("Show RAG Statistics", self)
         rag_stats_action.triggered.connect(self._show_rag_stats)
         rag_menu.addAction(rag_stats_action)
+
+        # CIN menu
+        cin_menu = menubar.addMenu("CIN")
+        cin_menu.addAction(self.upload_cin_action)
+        cin_menu.addAction(self.clear_cin_action)
 
     def create_statusbar(self):
         """Create status bar with line/column and word count indicators."""
@@ -1028,7 +1042,7 @@ class TextEditor(QMainWindow):
                 file.write(self.editor.toPlainText())
             self.update_window_title()
             
-            # ⭐ FIXED: Don't auto-reindex on save
+            # No auto-reindex on save
             # Just show a saved message
             if self.rag_system:
                 self.statusBar().showMessage(
@@ -1084,7 +1098,7 @@ class TextEditor(QMainWindow):
         
         self.setWindowTitle(f"{doc_name} - My Modern Text Editor")
 
-    # ⭐ NEW: Manual indexing method
+    # Manual indexing method
     def _index_current_file_manually(self):
         """User explicitly requests indexing of current file."""
         if not self.current_file:
@@ -1158,7 +1172,7 @@ class TextEditor(QMainWindow):
         t = threading.Thread(target=index_worker, daemon=True)
         t.start()
 
-    # ⭐ NEW: Clear RAG index method
+    # Clear RAG index method
     def _clear_rag_index(self):
         """Clear the entire RAG index."""
         if not self.rag_system:
@@ -1190,7 +1204,7 @@ class TextEditor(QMainWindow):
                     f"Failed to clear RAG index: {e}"
                 )
     
-    # ⭐ NEW: Show RAG statistics method
+    # Show RAG statistics method
     def _show_rag_stats(self):
         """Display RAG system statistics."""
         if not self.rag_system:
@@ -1219,6 +1233,69 @@ class TextEditor(QMainWindow):
             
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to get RAG stats: {e}")
+
+    # --- CIN (Context-Injection System) methods ---
+    def _upload_cin_file(self):
+        """Upload a file for CIN context injection."""
+        path, _ = QFileDialog.getOpenFileName(
+            self, "Upload File for CIN", "", "Allowed Files (*.txt *.pdf);;Text Files (*.txt);;PDF Files (*.pdf);;All Files (*)"
+        )
+        if not path:
+            return
+
+        # Check file size (50kB limit)
+        file_size_kb = os.path.getsize(path) / 1024
+        if file_size_kb > 50:
+            QMessageBox.warning(
+                self, "File Too Large", 
+                f"CIN is limited to files smaller than 50kB. Selected file is {file_size_kb:.1f}kB.\n"
+                "Please use RAG for larger files."
+            )
+            return
+
+        self.statusBar().showMessage(f"Injecting {os.path.basename(path)} via CIN...", 0)
+
+        try:
+            content = ""
+            ext = os.path.splitext(path)[1].lower()
+            
+            if ext == ".txt":
+                with open(path, "r", encoding="utf-8", errors="replace") as f:
+                    content = f.read()
+            elif ext == ".pdf":
+                # Use pdftotext to extract content
+                import subprocess
+                result = subprocess.run(['pdftotext', path, '-'], capture_output=True, text=True)
+                if result.returncode == 0:
+                    content = result.stdout
+                else:
+                    raise Exception(f"pdftotext failed with exit code {result.returncode}: {result.stderr}")
+            else:
+                # Fallback for other text-based files if user forces it
+                with open(path, "r", encoding="utf-8", errors="replace") as f:
+                    content = f.read()
+
+            if content:
+                self.chat_manager.cin_context = content
+                self.statusBar().showMessage(f"✓ Injected {os.path.basename(path)} via CIN", 3000)
+                QMessageBox.information(
+                    self, "CIN Success", 
+                    f"File '{os.path.basename(path)}' has been injected into the assistant's context.\n"
+                    "Sammy AI will now consider this content in your conversation."
+                )
+            else:
+                self.statusBar().showMessage("✗ Failed to extract content for CIN", 3000)
+                QMessageBox.warning(self, "CIN Error", "Could not extract any text from the selected file.")
+
+        except Exception as e:
+            self.statusBar().showMessage(f"✗ CIN error: {str(e)}", 5000)
+            QMessageBox.critical(self, "CIN Error", f"An error occurred during CIN injection: {str(e)}")
+
+    def _clear_cin_context(self):
+        """Clear the current CIN context."""
+        self.chat_manager.cin_context = None
+        self.statusBar().showMessage("CIN context cleared", 3000)
+        QMessageBox.information(self, "CIN Cleared", "The injected CIN context has been cleared.")
 
 class LineNumberArea(QWidget):
     def __init__(self, editor):
