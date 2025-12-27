@@ -15,8 +15,9 @@ from api_key_manager import APIKeyManager
 
 # Model configuration
 MODEL_MAPPING = {
-    "Gemma3:4b": {"name": "gemma3:4b", "type": "local"},
-    "Kimi K2:1T": {"name": "kimi-k2:1t", "type": "cloud"}
+    "Gemma3:4b": {"name": "gemma3:4b", "type": "local", "provider": "local"},
+    "Gemini 2.5 Flash": {"name": "gemini-2.5-flash", "type": "cloud", "provider": "google"},
+    "Kimi K2:1T": {"name": "kimi-k2:1t", "type": "cloud", "provider": "ollama"}
 }
 
 
@@ -227,10 +228,18 @@ class LLMConfig:
             system_prompt: Custom system prompt (defaults to SYSTEM_PROMPT)
         """
         self.model_key = model_key or self.DEFAULT_MODELS[ModelType.LOCAL]
+        self.model_config = MODEL_MAPPING.get(self.model_key, {})
+        provider = self.model_config.get("provider", "local")
+        
         # If an API key is not provided explicitly, attempt to load a stored key
-        # from the application's API key manager. This ensures UI-level API key
-        # configuration is respected when creating cloud model clients.
-        self.api_key = api_key or APIKeyManager.load_api_key()
+        # from the application's API key manager based on the provider.
+        if api_key:
+            self.api_key = api_key
+        elif provider == "local":
+            self.api_key = None
+        else:
+            self.api_key = APIKeyManager.load_api_key(provider)
+            
         self.max_tokens = max_tokens
         self.temperature = temperature
         self.top_p = top_p

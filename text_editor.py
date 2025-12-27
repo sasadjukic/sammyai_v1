@@ -945,11 +945,17 @@ class TextEditor(QMainWindow):
         dialog.exec()
 
         try:
-            # Load whatever key is currently stored (may be empty if cleared)
-            key = APIKeyManager.load_api_key()
             # Update the active LLM configuration
             if hasattr(self, "llm_config") and self.llm_config is not None:
-                self.llm_config.api_key = key
+                # We need to refresh the key for the current model's provider
+                from llm.client import MODEL_MAPPING
+                model_config = MODEL_MAPPING.get(self.llm_config.model_key, {})
+                provider = model_config.get("provider", "local")
+                
+                if provider != "local":
+                    self.llm_config.api_key = APIKeyManager.load_api_key(provider)
+                else:
+                    self.llm_config.api_key = None
 
                 # Try to re-create the client so any errors surface immediately
                 try:
