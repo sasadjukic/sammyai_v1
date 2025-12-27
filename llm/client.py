@@ -227,23 +227,46 @@ class LLMConfig:
             top_p: Top-p sampling parameter (default: 0.9)
             system_prompt: Custom system prompt (defaults to SYSTEM_PROMPT)
         """
-        self.model_key = model_key or self.DEFAULT_MODELS[ModelType.LOCAL]
-        self.model_config = MODEL_MAPPING.get(self.model_key, {})
-        provider = self.model_config.get("provider", "local")
+        self._model_key = model_key or self.DEFAULT_MODELS[ModelType.LOCAL]
+        self._api_key = api_key
         
         # If an API key is not provided explicitly, attempt to load a stored key
         # from the application's API key manager based on the provider.
-        if api_key:
-            self.api_key = api_key
-        elif provider == "local":
-            self.api_key = None
-        else:
-            self.api_key = APIKeyManager.load_api_key(provider)
+        if not self._api_key:
+            self._refresh_api_key()
             
         self.max_tokens = max_tokens
         self.temperature = temperature
         self.top_p = top_p
         self.system_prompt = system_prompt or SYSTEM_PROMPT
+
+    @property
+    def model_key(self) -> str:
+        return self._model_key
+
+    @model_key.setter
+    def model_key(self, value: str):
+        if value != self._model_key:
+            self._model_key = value
+            self._refresh_api_key()
+
+    @property
+    def api_key(self) -> Optional[str]:
+        return self._api_key
+
+    @api_key.setter
+    def api_key(self, value: Optional[str]):
+        self._api_key = value
+
+    def _refresh_api_key(self):
+        """Refresh the API key based on current model_key provider."""
+        model_config = MODEL_MAPPING.get(self._model_key, {})
+        provider = model_config.get("provider", "local")
+        
+        if provider == "local":
+            self._api_key = None
+        else:
+            self._api_key = APIKeyManager.load_api_key(provider)
     
     def create_client(self) -> LLMClient:
         """
