@@ -206,7 +206,8 @@ class TextEditor(QMainWindow):
                 overlap=50,
                 persist_dir=rag_persist_dir,
                 cache_dir=rag_cache_dir,
-                max_documents=50
+                max_documents=1000000,
+                max_chunks_per_file=150000
             )
             self.statusBar().showMessage("RAG system initialized", 2000)
         except Exception as e:

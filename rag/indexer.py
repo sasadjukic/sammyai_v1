@@ -60,7 +60,7 @@ class FileIndexer:
         
         # CRITICAL: Check file size before reading
         file_size = os.path.getsize(file_path)
-        max_size = 1 * 1024 * 1024  # 1MB limit
+        max_size = 50 * 1024 * 1024  # 50MB limit
         
         if file_size > max_size:
             print(f"⚠️  Skipping large file: {file_path} ({file_size / 1024:.1f} KB)")

@@ -32,9 +32,9 @@ class RAGSystem:
                  persist_dir: str = "cache/index",
                  cache_dir: str = "cache/embeddings",
                  max_context_tokens: int = 4000,
-                 max_documents: int = 1000,
+                 max_documents: int = 1000000,
                  embedding_batch_size: int = 8,
-                 max_chunks_per_file: int = 200):
+                 max_chunks_per_file: int = 150000):
         """
         Initialize RAG system
         
