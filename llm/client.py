@@ -70,7 +70,10 @@ class LLMClient:
             if self.provider == "google":
                 # Initialize Google Generative AI client
                 genai.configure(api_key=self.api_key)
-                self._google_model = genai.GenerativeModel(self.model_name)
+                self._google_model = genai.GenerativeModel(
+                    model_name=self.model_name,
+                    system_instruction=self.system_prompt
+                )
             elif self.provider == "ollama":
                 # For cloud-hosted Ollama models (e.g., Kimi K2)
                 self._client = ollama.Client(
