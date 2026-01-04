@@ -305,13 +305,17 @@ class LLMClient:
         
         history = []
         last_message = ""
+        extra_system_context = []
         
         for i, msg in enumerate(prepared_messages):
             role = msg["role"]
             content = msg["content"]
             
-            # Skip system messages (already in system_instruction)
+            # Use self.system_prompt for the core instruction,
+            # but preserve other system messages (e.g., CIN/RAG context)
             if role == "system":
+                if content != self.system_prompt:
+                    extra_system_context.append(content)
                 continue
             
             # Convert 'assistant' to 'model' for Google
@@ -326,6 +330,11 @@ class LLMClient:
                     "role": role,
                     "parts": [content]
                 })
+
+        # If we have extra system context, prepend it to the last message
+        if extra_system_context and last_message:
+            context_block = "\n\n".join(extra_system_context)
+            last_message = f"{context_block}\n\nUser query: {last_message}"
         
         return {
             "history": history,

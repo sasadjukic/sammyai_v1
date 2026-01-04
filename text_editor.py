@@ -824,14 +824,15 @@ class TextEditor(QMainWindow):
         def worker():
             try:
                 # Prepare messages for the LLM using the chat manager's active session
-                # Use RAG context if available
-                if self.rag_system:
+                # Always check for potential RAG or CIN context
+                if self.chat_manager:
                     msgs = self.chat_manager.get_messages_for_llm_with_context(
                         query=message,
                         top_k=3
                     )
                 else:
-                    msgs = self.chat_manager.get_messages_for_llm()
+                    # Fallback unlikely as chat_manager is core
+                    msgs = [{"role": "user", "content": message}]
                 
                 # Call the synchronous chat API (blocking) in the thread
                 reply = self.llm_client.chat(msgs)
