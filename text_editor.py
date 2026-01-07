@@ -1,6 +1,7 @@
 import sys
 import re
 import os
+from typing import Optional
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QPlainTextEdit, QFileDialog, QMessageBox, QToolBar,
     QToolButton, QMenu, QWidget, QLabel, QStatusBar, QInputDialog, QLineEdit,
@@ -23,6 +24,10 @@ from ui.chat_panel import ChatPanel
 
 # RAG system
 from rag.rag_system import RAGSystem
+
+# Diff-based editing
+from PySide6.QtWidgets import QDialog
+from editing.diff_viewer import DiffViewerWidget
 
 
 class SearchWidget(QWidget):
@@ -143,12 +148,11 @@ class SearchWidget(QWidget):
 
 
 class TextEditor(QMainWindow):
-
-    
-    # Signals for thread-safe LLM communication
+    # Signals for LLM communication
     llm_response_received = Signal(str)
     llm_error_occurred = Signal(str)
-
+    dbe_diff_ready = Signal(str, str, str)  # original, modified, user_request
+    
     def __init__(self):
         super().__init__()
 
@@ -241,6 +245,7 @@ class TextEditor(QMainWindow):
         # Connect LLM signals
         self.llm_response_received.connect(self._handle_llm_response)
         self.llm_error_occurred.connect(self._handle_llm_error)
+        self.dbe_diff_ready.connect(self._show_dbe_diff)
 
         # Chat panel (created lazily when the agent button is pressed)
         self.chat_dock: QDockWidget | None = None
@@ -249,6 +254,10 @@ class TextEditor(QMainWindow):
         # Track if indexing is in progress
         self._indexing_in_progress = False
         self._indexing_lock = threading.Lock()
+
+        # Initialize DBE state
+        self.dbe_enabled = False
+        self.dbe_context_lines = 20  # Number of lines before/after cursor for context
 
 
     def create_actions(self):
@@ -366,6 +375,28 @@ class TextEditor(QMainWindow):
         self.clear_cin_action = QAction("Clear CIN Context", self)
         self.clear_cin_action.triggered.connect(self._clear_cin_context)
         self.clear_cin_action.setStatusTip("Clear the current CIN injected context")
+
+        # DBE (Diff-Based Editing) actions
+        self.compare_file_action = QAction("Compare with File...", self)
+        self.compare_file_action.setShortcut(QKeySequence("Ctrl+D"))
+        self.compare_file_action.triggered.connect(self._compare_with_file)
+        self.compare_file_action.setStatusTip("Compare current text with another file using diff")
+
+        self.compare_clipboard_action = QAction("Compare with Clipboard", self)
+        self.compare_clipboard_action.setShortcut(QKeySequence("Ctrl+Shift+D"))
+        self.compare_clipboard_action.triggered.connect(self._compare_with_clipboard)
+        self.compare_clipboard_action.setStatusTip("Compare current text with clipboard content using diff")
+
+        self.apply_diff_action = QAction("Apply Diff from File...", self)
+        self.apply_diff_action.triggered.connect(self._apply_diff_from_file)
+        self.apply_diff_action.setStatusTip("Apply a diff file to current text")
+
+        # DBE mode toggle
+        self.toggle_dbe_action = QAction("Enable DBE Mode", self)
+        self.toggle_dbe_action.setCheckable(True)
+        self.toggle_dbe_action.setChecked(False)
+        self.toggle_dbe_action.triggered.connect(self._toggle_dbe_mode)
+        self.toggle_dbe_action.setStatusTip("Enable diff-based editing mode for LLM suggestions")
 
     def _load_icon(self, theme_name, fallback):
         icon = QIcon.fromTheme(theme_name)
@@ -532,6 +563,15 @@ class TextEditor(QMainWindow):
         cin_menu = menubar.addMenu("CIN")
         cin_menu.addAction(self.upload_cin_action)
         cin_menu.addAction(self.clear_cin_action)
+
+        # DBE (Diff-Based Editing) menu
+        dbe_menu = menubar.addMenu("DBE")
+        dbe_menu.addAction(self.toggle_dbe_action)
+        dbe_menu.addSeparator()
+        dbe_menu.addAction(self.compare_file_action)
+        dbe_menu.addAction(self.compare_clipboard_action)
+        dbe_menu.addSeparator()
+        dbe_menu.addAction(self.apply_diff_action)
 
     def create_statusbar(self):
         """Create status bar with line/column and word count indicators."""
@@ -803,23 +843,34 @@ class TextEditor(QMainWindow):
         if not message:
             return
 
-        # Add user message to session
+        # Immediately show user message in UI FIRST
+        if self.chat_panel:
+            self.chat_panel.add_user_message(message)
+            self.chat_panel.set_thinking(True)
+
+        # Then add user message to session
         try:
             self.chat_manager.add_message(MessageRole.USER, message)
         except Exception:
             pass
 
-        # Immediately show user message in UI
-        if self.chat_panel:
-            self.chat_panel.add_user_message(message)
-            self.chat_panel.set_thinking(True)
-
         # If LLM not available, inform the user
         if not self.llm_client:
             if self.chat_panel:
                 self.chat_panel.add_system_message("LLM client not initialized. Configure API key or check environment.")
+                self.chat_panel.set_thinking(False)
             return
 
+        # Check if DBE mode is enabled
+        if self.dbe_enabled:
+            # DBE mode: inject editor context and show diff
+            self._handle_dbe_request(message)
+        else:
+            # Normal mode: standard chat
+            self._handle_normal_chat(message)
+    
+    def _handle_normal_chat(self, message: str):
+        """Handle normal chat mode (non-DBE)."""
         # Run LLM query in background thread to avoid blocking UI
         def worker():
             try:
@@ -850,6 +901,102 @@ class TextEditor(QMainWindow):
 
         t = threading.Thread(target=worker, daemon=True)
         t.start()
+    
+    def _handle_dbe_request(self, message: str):
+        """Handle DBE mode request with editor context."""
+        # Get editor context
+        text, cursor_line, selection_start, selection_end = self._get_editor_context_for_dbe()
+        
+        if not text:
+            if self.chat_panel:
+                self.chat_panel.set_thinking(False)
+                self.chat_panel.add_system_message("⚠️ Editor is empty. Please add some text before using DBE mode.")
+            return
+        
+        # Store original text for diff
+        original_text = text
+        
+        # Prepare editor context
+        editor_context = self.chat_manager.prepare_dbe_context(
+            file_path=self.current_file,
+            text=text,
+            cursor_line=cursor_line,
+            selection_start=selection_start,
+            selection_end=selection_end,
+            context_lines=self.dbe_context_lines
+        )
+        
+        # Run LLM query in background thread
+        def worker():
+            try:
+                # Get messages with DBE context
+                from llm.dbe_system_prompt import get_dbe_system_prompt
+                
+                # Temporarily override system prompt for DBE
+                original_prompt = self.llm_client.system_prompt
+                self.llm_client.system_prompt = get_dbe_system_prompt()
+                
+                # Get messages with editor context
+                msgs = self.chat_manager.get_messages_for_llm_with_dbe_context(
+                    query=message,
+                    editor_context=editor_context
+                )
+                
+                # Call LLM
+                reply = self.llm_client.chat(msgs)
+                
+                # Restore original prompt
+                self.llm_client.system_prompt = original_prompt
+                
+                # Extract revised text
+                revised_text = self._extract_text_from_llm_response(reply)
+                
+                # Add assistant message to session
+                try:
+                    self.chat_manager.add_message(MessageRole.ASSISTANT, f"[DBE] Suggested changes (view in diff)")
+                except Exception:
+                    pass
+                
+                # Emit signal to show diff on main thread
+                self.dbe_diff_ready.emit(original_text, revised_text, message)
+                
+            except Exception as e:
+                self.llm_error_occurred.emit(str(e))
+        
+        t = threading.Thread(target=worker, daemon=True)
+        t.start()
+    
+    @Slot(str, str, str)
+    def _show_dbe_diff(self, original: str, modified: str, user_request: str):
+        """Show DBE diff in viewer (called on main thread)."""
+        if self.chat_panel:
+            self.chat_panel.set_thinking(False)
+        
+        # Create diff dialog
+        dialog = self._create_diff_dialog()
+        dialog.setWindowTitle(f"DBE Suggestion - {user_request[:50]}...")
+        
+        # Load diff
+        dialog.diff_viewer.load_diff(
+            original, modified,
+            "current", "llm_suggestion"
+        )
+        
+        # Show dialog
+        if dialog.exec() == QDialog.Accepted:
+            # User approved - apply changes
+            modified_text = dialog.diff_viewer.get_modified_text()
+            if modified_text:
+                self.editor.setPlainText(modified_text)
+                if self.chat_panel:
+                    self.chat_panel.add_system_message("✓ Changes applied successfully!")
+                self.statusBar().showMessage("✓ DBE changes applied", 3000)
+        else:
+            # User rejected
+            if self.chat_panel:
+                self.chat_panel.add_system_message("✗ Changes rejected")
+            self.statusBar().showMessage("✗ DBE changes rejected", 3000)
+
     
     @Slot(str)
     def _handle_llm_response(self, reply: str):
@@ -1304,6 +1451,199 @@ class TextEditor(QMainWindow):
         self.chat_manager.cin_context = None
         self.statusBar().showMessage("CIN context cleared", 3000)
         QMessageBox.information(self, "CIN Cleared", "The injected CIN context has been cleared.")
+
+    # --- DBE (Diff-Based Editing) methods ---
+    def _compare_with_file(self):
+        """Compare current text with another file using diff viewer."""
+        # Get current text
+        current_text = self.editor.toPlainText()
+        
+        if not current_text:
+            QMessageBox.warning(self, "No Content", "Current editor is empty.")
+            return
+        
+        # Select file to compare
+        path, _ = QFileDialog.getOpenFileName(
+            self, "Select File to Compare", "", 
+            "Text Files (*.txt *.py *.md *.js *.java *.cpp *.c *.h);;All Files (*)"
+        )
+        
+        if not path:
+            return
+        
+        try:
+            # Read the file
+            with open(path, 'r', encoding='utf-8') as f:
+                other_text = f.read()
+            
+            # Create diff dialog
+            dialog = self._create_diff_dialog()
+            
+            current_name = self.current_file if self.current_file else "current"
+            dialog.diff_viewer.load_diff(current_text, other_text, current_name, path)
+            
+            # If user applies the diff, update the editor
+            if dialog.exec() == QDialog.Accepted:
+                modified_text = dialog.diff_viewer.get_modified_text()
+                if modified_text:
+                    self.editor.setPlainText(modified_text)
+                    self.statusBar().showMessage("Diff applied successfully", 3000)
+        
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to compare files: {e}")
+
+    def _compare_with_clipboard(self):
+        """Compare current text with clipboard content using diff viewer."""
+        # Get current text
+        current_text = self.editor.toPlainText()
+        
+        if not current_text:
+            QMessageBox.warning(self, "No Content", "Current editor is empty.")
+            return
+        
+        # Get clipboard text
+        clipboard = QApplication.clipboard()
+        clipboard_text = clipboard.text()
+        
+        if not clipboard_text:
+            QMessageBox.warning(self, "Empty Clipboard", "Clipboard is empty.")
+            return
+        
+        # Create diff dialog
+        dialog = self._create_diff_dialog()
+        
+        current_name = self.current_file if self.current_file else "current"
+        dialog.diff_viewer.load_diff(current_text, clipboard_text, current_name, "clipboard")
+        
+        # If user applies the diff, update the editor
+        if dialog.exec() == QDialog.Accepted:
+            modified_text = dialog.diff_viewer.get_modified_text()
+            if modified_text:
+                self.editor.setPlainText(modified_text)
+                self.statusBar().showMessage("Diff applied successfully", 3000)
+
+    def _apply_diff_from_file(self):
+        """Apply a diff file to current text."""
+        # Get current text
+        current_text = self.editor.toPlainText()
+        
+        if not current_text:
+            QMessageBox.warning(self, "No Content", "Current editor is empty.")
+            return
+        
+        # Select diff file
+        path, _ = QFileDialog.getOpenFileName(
+            self, "Select Diff File", "", 
+            "Diff Files (*.diff *.patch);;All Files (*)"
+        )
+        
+        if not path:
+            return
+        
+        try:
+            # Read the diff file
+            with open(path, 'r', encoding='utf-8') as f:
+                diff_string = f.read()
+            
+            # Create diff dialog
+            dialog = self._create_diff_dialog()
+            dialog.diff_viewer.load_diff_from_string(diff_string, current_text)
+            
+            # If user applies the diff, update the editor
+            if dialog.exec() == QDialog.Accepted:
+                modified_text = dialog.diff_viewer.get_modified_text()
+                if modified_text:
+                    self.editor.setPlainText(modified_text)
+                    self.statusBar().showMessage("Diff applied successfully", 3000)
+        
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to apply diff: {e}")
+
+    def _create_diff_dialog(self):
+        """Create a diff viewer dialog."""
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Diff Viewer - DBE")
+        dialog.setGeometry(100, 100, 900, 600)
+        
+        layout = QVBoxLayout(dialog)
+        
+        diff_viewer = DiffViewerWidget(dialog)
+        layout.addWidget(diff_viewer)
+        
+        # Store reference for access
+        dialog.diff_viewer = diff_viewer
+        
+        # Connect signals
+        diff_viewer.diff_applied.connect(dialog.accept)
+        diff_viewer.diff_rejected.connect(dialog.reject)
+        
+        return dialog
+
+    def _toggle_dbe_mode(self):
+        """Toggle DBE mode on/off."""
+        self.dbe_enabled = self.toggle_dbe_action.isChecked()
+        
+        if self.dbe_enabled:
+            self.statusBar().showMessage("🔧 DBE Mode ENABLED - LLM suggestions will show as diffs", 3000)
+            if self.chat_panel:
+                self.chat_panel.add_system_message("🔧 DBE Mode enabled. LLM suggestions will now appear as diffs for your review.")
+        else:
+            self.statusBar().showMessage("DBE Mode disabled - Normal chat mode", 3000)
+            if self.chat_panel:
+                self.chat_panel.add_system_message("DBE Mode disabled. Returning to normal chat mode.")
+    
+    def _get_editor_context_for_dbe(self) -> tuple[str, int, Optional[int], Optional[int]]:
+        """
+        Get editor context for DBE mode.
+        
+        Returns:
+            Tuple of (text, cursor_line, selection_start, selection_end)
+        """
+        text = self.editor.toPlainText()
+        cursor = self.editor.textCursor()
+        
+        # Get cursor line (1-indexed)
+        cursor_line = cursor.blockNumber() + 1
+        
+        # Check if there's a selection
+        if cursor.hasSelection():
+            # Get selection start and end blocks
+            start_block = self.editor.document().findBlock(cursor.selectionStart())
+            end_block = self.editor.document().findBlock(cursor.selectionEnd())
+            
+            selection_start = start_block.blockNumber() + 1
+            selection_end = end_block.blockNumber() + 1
+        else:
+            selection_start = None
+            selection_end = None
+        
+        return text, cursor_line, selection_start, selection_end
+    
+    def _extract_text_from_llm_response(self, response: str) -> str:
+        """
+        Extract revised text from LLM response.
+        
+        For now, we assume the LLM returns clean text.
+        In the future, we could add parsing for markdown code blocks.
+        
+        Args:
+            response: LLM response
+            
+        Returns:
+            Extracted text
+        """
+        # Remove common markdown code block wrappers if present
+        text = response.strip()
+        
+        # Check for markdown code blocks
+        if text.startswith("```") and text.endswith("```"):
+            lines = text.split("\n")
+            # Remove first and last lines (the ``` markers)
+            if len(lines) > 2:
+                text = "\n".join(lines[1:-1])
+        
+        return text.strip()
+
 
 class LineNumberArea(QWidget):
     def __init__(self, editor):
