@@ -2,6 +2,7 @@
 File Indexer - Handles parsing and chunking of files for RAG system
 """
 import os
+import subprocess
 from pathlib import Path
 from typing import List, Dict, Optional
 import hashlib
@@ -18,11 +19,7 @@ class Document:
 class FileIndexer:
     """Indexes files by parsing and chunking them"""
     
-    SUPPORTED_EXTENSIONS = {
-        '.py', '.txt', '.md', '.json', '.yaml', '.yml',
-        '.js', '.jsx', '.ts', '.tsx', '.html', '.css',
-        '.cpp', '.c', '.h', '.java', '.go', '.rs'
-    }
+    SUPPORTED_EXTENSIONS = {'.txt', '.pdf'}
     
     def __init__(self, chunk_size: int = 500, overlap: int = 50):
         """
@@ -67,18 +64,26 @@ class FileIndexer:
             return None
         
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
-                content = f.read()
-            return content
-        except UnicodeDecodeError:
-            # Try with different encoding
-            try:
-                with open(file_path, 'r', encoding='latin-1') as f:
-                    content = f.read()
-                return content
-            except Exception as e:
-                print(f"Error reading file {file_path}: {e}")
-                return None
+            ext = Path(file_path).suffix.lower()
+            if ext == '.pdf':
+                # Use pdftotext to extract content
+                result = subprocess.run(['pdftotext', file_path, '-'], capture_output=True, text=True)
+                if result.returncode == 0:
+                    return result.stdout
+                else:
+                    print(f"Error parsing PDF {file_path}: pdftotext failed with exit code {result.returncode}")
+                    return None
+            else:
+                # Default text parsing
+                try:
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        content = f.read()
+                    return content
+                except UnicodeDecodeError:
+                    # Try with different encoding
+                    with open(file_path, 'r', encoding='latin-1') as f:
+                        content = f.read()
+                    return content
         except Exception as e:
             print(f"Error reading file {file_path}: {e}")
             return None

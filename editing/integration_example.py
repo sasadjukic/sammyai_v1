@@ -72,7 +72,7 @@ def _compare_with_file(self):
     
     # Select file to compare
     path, _ = QFileDialog.getOpenFileName(
-        self, "Select File to Compare", "", "Text Files (*.txt *.py *.md);;All Files (*)"
+        self, "Select File to Compare", "", "Text Files (*.txt);;All Files (*)"
     )
     
     if not path:

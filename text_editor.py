@@ -1251,7 +1251,7 @@ class TextEditor(QMainWindow):
         else:
             doc_name = f"Untitled {self.untitled_count}"
         
-        self.setWindowTitle(f"{doc_name} - My Modern Text Editor")
+        self.setWindowTitle(f"{doc_name} - SammyAI")
 
     # Manual indexing method
     def _index_current_file_manually(self):
@@ -1465,7 +1465,7 @@ class TextEditor(QMainWindow):
         # Select file to compare
         path, _ = QFileDialog.getOpenFileName(
             self, "Select File to Compare", "", 
-            "Text Files (*.txt *.py *.md *.js *.java *.cpp *.c *.h);;All Files (*)"
+            "Text Files (*.txt);;All Files (*)"
         )
         
         if not path:

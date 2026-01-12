@@ -45,7 +45,7 @@ class ChatPanel(QWidget):
         
         # Header
         header_layout = QHBoxLayout()
-        header_label = QLabel("💬 SammyAI Assistant")
+        header_label = QLabel("💬 SammyAI")
         header_label.setStyleSheet("font-size: 18px; font-weight: bold; color: #dddddd;")
         # Model selection combo box
         try:
