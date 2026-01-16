@@ -516,7 +516,7 @@ class ChatManager:
                            cursor_line: int,
                            selection_start: Optional[int] = None,
                            selection_end: Optional[int] = None,
-                           context_lines: int = 20) -> str:
+                           context_lines: int = 20) -> tuple:
         """
         Prepare editor context for DBE mode.
         
@@ -529,7 +529,11 @@ class ChatManager:
             context_lines: Number of lines before/after to include
             
         Returns:
-            Formatted context string for LLM
+            Tuple of (context_string, start_line, end_line, original_section_text)
+            - context_string: Formatted context for LLM with line numbers
+            - start_line: 1-indexed start line of included section
+            - end_line: 1-indexed end line of included section
+            - original_section_text: Raw text of the included section (for reconstruction)
         """
         lines = text.splitlines()
         total_lines = len(lines)
@@ -547,6 +551,10 @@ class ChatManager:
             end_line = min(total_lines, cursor_line + context_lines)
             focus_start = cursor_line
             focus_end = cursor_line
+        
+        # Extract the original section text (for later reconstruction)
+        original_section_lines = lines[start_line - 1:end_line]
+        original_section_text = "\n".join(original_section_lines)
         
         # Build context string
         context_parts = []
@@ -579,7 +587,8 @@ class ChatManager:
         
         context_parts.append("--- End of Content ---")
         
-        return "\n".join(context_parts)
+        context_string = "\n".join(context_parts)
+        return (context_string, start_line, end_line, original_section_text)
     
     def get_messages_for_llm_with_dbe_context(self,
                                               query: str,
@@ -601,6 +610,9 @@ class ChatManager:
         # Get base messages
         messages = self.get_messages_for_llm(session_id, include_system)
         
+        # Calculate line count for explicit instruction
+        section_line_count = editor_context.count('\n') - editor_context.count('--- ')  # Approximate
+        
         # Create DBE context message
         dbe_context_message = {
             "role": "system",
@@ -608,8 +620,13 @@ class ChatManager:
 
 {editor_context}
 
-The user will request changes to this text. Provide the complete revised version of the text section shown above.
-Return ONLY the revised text without any explanations or markdown formatting."""
+CRITICAL INSTRUCTIONS:
+1. The user will request changes to the text section shown above
+2. You MUST return the ENTIRE section with your changes applied
+3. Include ALL lines - both modified and unmodified
+4. Do NOT return only the changed paragraph(s)
+5. Do NOT include line numbers or markers (like "→") in your response
+6. Return clean prose only, no explanations"""
         }
         
         # Insert DBE context after system messages
