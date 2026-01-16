@@ -915,9 +915,10 @@ class TextEditor(QMainWindow):
         
         # Store original text for diff
         original_text = text
+        original_lines = text.splitlines()
         
-        # Prepare editor context
-        editor_context = self.chat_manager.prepare_dbe_context(
+        # Prepare editor context - now returns tuple with line range info
+        context_result = self.chat_manager.prepare_dbe_context(
             file_path=self.current_file,
             text=text,
             cursor_line=cursor_line,
@@ -925,6 +926,9 @@ class TextEditor(QMainWindow):
             selection_end=selection_end,
             context_lines=self.dbe_context_lines
         )
+        
+        # Unpack the tuple: (context_string, start_line, end_line, original_section_text)
+        editor_context, dbe_start_line, dbe_end_line, original_section = context_result
         
         # Run LLM query in background thread
         def worker():
@@ -948,8 +952,31 @@ class TextEditor(QMainWindow):
                 # Restore original prompt
                 self.llm_client.system_prompt = original_prompt
                 
-                # Extract revised text
-                revised_text = self._extract_text_from_llm_response(reply)
+                # Extract revised section from LLM response
+                revised_section = self._extract_text_from_llm_response(reply)
+                
+                # Reconstruct the full document by splicing revised section
+                # into the original at the correct position
+                revised_section_lines = revised_section.splitlines()
+                
+                # Build the reconstructed full document:
+                # - Lines before the DBE section (1 to start_line-1)
+                # - The revised section from LLM
+                # - Lines after the DBE section (end_line+1 to end)
+                reconstructed_lines = []
+                
+                # Add lines before DBE section
+                if dbe_start_line > 1:
+                    reconstructed_lines.extend(original_lines[:dbe_start_line - 1])
+                
+                # Add revised section
+                reconstructed_lines.extend(revised_section_lines)
+                
+                # Add lines after DBE section
+                if dbe_end_line < len(original_lines):
+                    reconstructed_lines.extend(original_lines[dbe_end_line:])
+                
+                reconstructed_text = "\n".join(reconstructed_lines)
                 
                 # Add assistant message to session
                 try:
@@ -958,7 +985,8 @@ class TextEditor(QMainWindow):
                     pass
                 
                 # Emit signal to show diff on main thread
-                self.dbe_diff_ready.emit(original_text, revised_text, message)
+                # Now comparing full original vs full reconstructed document
+                self.dbe_diff_ready.emit(original_text, reconstructed_text, message)
                 
             except Exception as e:
                 self.llm_error_occurred.emit(str(e))
