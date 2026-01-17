@@ -10,6 +10,7 @@ from enum import Enum
 import json
 import os
 from pathlib import Path
+from llm.dbe_system_prompt import get_dbe_system_prompt
 
 
 class MessageRole(Enum):
@@ -534,6 +535,8 @@ class ChatManager:
             - start_line: 1-indexed start line of included section
             - end_line: 1-indexed end line of included section
             - original_section_text: Raw text of the included section (for reconstruction)
+            - focus_start: 1-indexed start line of focus area
+            - focus_end: 1-indexed end line of focus area
         """
         lines = text.splitlines()
         total_lines = len(lines)
@@ -585,10 +588,9 @@ class ChatManager:
             
             context_parts.append(f"{marker}{line_num:4d}: {line_content}")
         
-        context_parts.append("--- End of Content ---")
         
         context_string = "\n".join(context_parts)
-        return (context_string, start_line, end_line, original_section_text)
+        return (context_string, start_line, end_line, original_section_text, focus_start, focus_end)
     
     def get_messages_for_llm_with_dbe_context(self,
                                               query: str,
@@ -616,17 +618,10 @@ class ChatManager:
         # Create DBE context message
         dbe_context_message = {
             "role": "system",
-            "content": f"""EDITOR CONTEXT (for diff-based editing):
+            "content": f"""{get_dbe_system_prompt()}
 
-{editor_context}
-
-CRITICAL INSTRUCTIONS:
-1. The user will request changes to the text section shown above
-2. You MUST return the ENTIRE section with your changes applied
-3. Include ALL lines - both modified and unmodified
-4. Do NOT return only the changed paragraph(s)
-5. Do NOT include line numbers or markers (like "→") in your response
-6. Return clean prose only, no explanations"""
+EDITOR CONTEXT:
+{editor_context}"""
         }
         
         # Insert DBE context after system messages

@@ -28,6 +28,7 @@ from rag.rag_system import RAGSystem
 # Diff-based editing
 from PySide6.QtWidgets import QDialog
 from editing.diff_viewer import DiffViewerWidget
+from editing.diff_manager import DiffManager
 
 
 class SearchWidget(QWidget):
@@ -258,6 +259,7 @@ class TextEditor(QMainWindow):
         # Initialize DBE state
         self.dbe_enabled = False
         self.dbe_context_lines = 20  # Number of lines before/after cursor for context
+        self.diff_manager = DiffManager()
 
 
     def create_actions(self):
@@ -927,8 +929,8 @@ class TextEditor(QMainWindow):
             context_lines=self.dbe_context_lines
         )
         
-        # Unpack the tuple: (context_string, start_line, end_line, original_section_text)
-        editor_context, dbe_start_line, dbe_end_line, original_section = context_result
+        # Unpack the tuple with focus lines: (context_string, start_line, end_line, original_section_text, focus_start, focus_end)
+        editor_context, dbe_start_line, dbe_end_line, original_section, focus_start, focus_end = context_result
         
         # Run LLM query in background thread
         def worker():
@@ -966,15 +968,16 @@ class TextEditor(QMainWindow):
                 reconstructed_lines = []
                 
                 # Add lines before DBE section
-                if dbe_start_line > 1:
-                    reconstructed_lines.extend(original_lines[:dbe_start_line - 1])
+                # Add lines before FOCUS section
+                if focus_start > 1:
+                    reconstructed_lines.extend(original_lines[:focus_start - 1])
                 
                 # Add revised section
                 reconstructed_lines.extend(revised_section_lines)
                 
-                # Add lines after DBE section
-                if dbe_end_line < len(original_lines):
-                    reconstructed_lines.extend(original_lines[dbe_end_line:])
+                # Add lines after FOCUS section
+                if focus_end < len(original_lines):
+                    reconstructed_lines.extend(original_lines[focus_end:])
                 
                 reconstructed_text = "\n".join(reconstructed_lines)
                 
@@ -1595,7 +1598,7 @@ class TextEditor(QMainWindow):
         
         layout = QVBoxLayout(dialog)
         
-        diff_viewer = DiffViewerWidget(dialog)
+        diff_viewer = DiffViewerWidget(dialog, diff_manager=self.diff_manager)
         layout.addWidget(diff_viewer)
         
         # Store reference for access
