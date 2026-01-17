@@ -6,7 +6,7 @@ Starts with a local Ollama instance but eventually may support multiple provider
 from typing import Optional, Dict, List, Callable
 from enum import Enum
 import ollama
-import google.generativeai as genai
+from google import genai
 # Use a package-relative import so importing `llm.client` works when the package
 # is loaded as `llm` (avoids ModuleNotFoundError when running from project root)
 from .system_prompt import SYSTEM_PROMPT
@@ -61,19 +61,15 @@ class LLMClient:
             raise ValueError(f"API key required for cloud model: {model_key}")
         
         self._client = None
-        self._google_model = None
+        self._google_client = None
         self._initialize_client()
     
     def _initialize_client(self):
         """Initialize the appropriate client based on provider."""
         try:
             if self.provider == "google":
-                # Initialize Google Generative AI client
-                genai.configure(api_key=self.api_key)
-                self._google_model = genai.GenerativeModel(
-                    model_name=self.model_name,
-                    system_instruction=self.system_prompt
-                )
+                # Initialize Google Gen AI client
+                self._google_client = genai.Client(api_key=self.api_key)
             elif self.provider == "ollama":
                 # For cloud-hosted Ollama models (e.g., Kimi K2)
                 self._client = ollama.Client(
@@ -161,26 +157,30 @@ class LLMClient:
         top_p: float = 0.9,
         include_system: bool = True
     ) -> str:
-        """Stream chat using Google Generative AI."""
+        """Stream chat using Google Gen AI SDK."""
         try:
             # Convert messages to Google format
             google_messages = self._convert_to_google_format(messages, include_system)
             
-            # Configure generation settings
-            generation_config = {
+            # Configure generation config
+            config = {
                 "temperature": temperature,
                 "top_p": top_p,
+                "system_instruction": self.system_prompt
             }
             if max_tokens:
-                generation_config["max_output_tokens"] = max_tokens
+                config["max_output_tokens"] = max_tokens
             
             # Start chat session with history
-            chat = self._google_model.start_chat(history=google_messages["history"])
+            chat = self._google_client.chats.create(
+                model=self.model_name,
+                history=google_messages["history"],
+                config=config
+            )
             
             # Send the last message and get streaming response
             response = chat.send_message(
                 google_messages["last_message"],
-                generation_config=generation_config,
                 stream=True
             )
             
@@ -262,26 +262,30 @@ class LLMClient:
         top_p: float = 0.9,
         include_system: bool = True
     ) -> str:
-        """Chat using Google Generative AI."""
+        """Chat using Google Gen AI SDK."""
         try:
             # Convert messages to Google format
             google_messages = self._convert_to_google_format(messages, include_system)
             
-            # Configure generation settings
-            generation_config = {
+            # Configure generation config
+            config = {
                 "temperature": temperature,
                 "top_p": top_p,
+                "system_instruction": self.system_prompt
             }
             if max_tokens:
-                generation_config["max_output_tokens"] = max_tokens
+                config["max_output_tokens"] = max_tokens
             
             # Start chat session with history
-            chat = self._google_model.start_chat(history=google_messages["history"])
+            chat = self._google_client.chats.create(
+                model=self.model_name,
+                history=google_messages["history"],
+                config=config
+            )
             
             # Send the last message and get response
             response = chat.send_message(
-                google_messages["last_message"],
-                generation_config=generation_config
+                google_messages["last_message"]
             )
             
             return response.text
