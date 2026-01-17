@@ -983,7 +983,7 @@ class TextEditor(QMainWindow):
                 
                 # Add assistant message to session
                 try:
-                    self.chat_manager.add_message(MessageRole.ASSISTANT, f"[DBE] Suggested changes (view in diff)")
+                    self.chat_manager.add_message(MessageRole.ASSISTANT, reply)
                 except Exception:
                     pass
                 
