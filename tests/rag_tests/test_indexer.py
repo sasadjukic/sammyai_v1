@@ -11,8 +11,10 @@ def indexer():
     return FileIndexer(chunk_size=100, overlap=20)
 
 def test_is_supported_file(indexer):
-    assert indexer.is_supported_file("test.py") is True
+    assert indexer.is_supported_file("test.txt") is True
     assert indexer.is_supported_file("README.md") is True
+    assert indexer.is_supported_file("document.pdf") is True
+    assert indexer.is_supported_file("test.py") is False
     assert indexer.is_supported_file("image.png") is False
     assert indexer.is_supported_file("no_extension") is False
 
@@ -44,7 +46,7 @@ def test_chunk_text(indexer):
 
 def test_index_file(indexer):
     content = "Line 1\nLine 2\nLine 3\n" * 10
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False) as f:
         f.write(content)
         temp_path = f.name
     
@@ -53,14 +55,14 @@ def test_index_file(indexer):
         assert len(chunks) > 0
         assert chunks[0].text.startswith("Line 1")
         assert 'file_path' in chunks[0].metadata
-        assert chunks[0].metadata['file_name'].endswith('.py')
+        assert chunks[0].metadata['file_name'].endswith('.md')
     finally:
         os.unlink(temp_path)
 
 def test_index_directory(indexer):
     with tempfile.TemporaryDirectory() as tmpdir:
         # Create some files
-        f1 = Path(tmpdir) / "file1.py"
+        f1 = Path(tmpdir) / "file1.md"
         f1.write_text("print('hello')\n" * 20)
         
         f2 = Path(tmpdir) / "file2.txt"
@@ -70,8 +72,8 @@ def test_index_directory(indexer):
         f3.write_text("binary data")
         
         chunks = indexer.index_directory(tmpdir, recursive=False)
-        # Should only index .py and .txt
+        # Should only index .md and .txt
         files_indexed = set(c.metadata['file_name'] for c in chunks)
-        assert "file1.py" in files_indexed
+        assert "file1.md" in files_indexed
         assert "file2.txt" in files_indexed
         assert "unsupported.exe" not in files_indexed
