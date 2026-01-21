@@ -30,6 +30,9 @@ from PySide6.QtWidgets import QDialog
 from editing.diff_viewer import DiffViewerWidget
 from editing.diff_manager import DiffManager
 
+# LLM Settings UI
+from ui.llm_settings import LLMSettingsDialog
+
 
 class SearchWidget(QWidget):
     """A search widget with text input, match counter, and navigation buttons."""
@@ -354,7 +357,8 @@ class TextEditor(QMainWindow):
         self.key_action.triggered.connect(self._on_configure_api_key)
 
         self.settings_action = QAction("Settings", self)
-        self.settings_action.setEnabled(False)
+        self.settings_action.setEnabled(True)
+        self.settings_action.triggered.connect(self._on_show_llm_settings)
 
         # Initial enable/disable states
         self.copy_action.setEnabled(False)
@@ -396,7 +400,6 @@ class TextEditor(QMainWindow):
         # DBE mode toggle
         self.toggle_dbe_action = QAction("Enable DBE Mode", self)
         self.toggle_dbe_action.setCheckable(True)
-        self.toggle_dbe_action.setChecked(False)
         self.toggle_dbe_action.triggered.connect(self._toggle_dbe_mode)
         self.toggle_dbe_action.setStatusTip("Enable diff-based editing mode for LLM suggestions")
 
@@ -1129,18 +1132,38 @@ class TextEditor(QMainWindow):
             self.editor.undo()
         elif action == "redo":
             self.editor.redo()
-    
+
+    def _on_show_llm_settings(self):
+        """Show the LLM parameter settings dialog and update configuration."""
+        if not hasattr(self, 'llm_config'):
+            return
+            
+        dialog = LLMSettingsDialog(
+            temperature=self.llm_config.temperature,
+            top_p=self.llm_config.top_p,
+            parent=self
+        )
+        
+        if dialog.exec():
+            temp, top_p = dialog.get_values()
+            
+            # Update configuration
+            self.llm_config.temperature = temp
+            self.llm_config.top_p = top_p
+            
+            # Apply to active client if it exists
+            if self.llm_client:
+                self.llm_config.apply_to_client(self.llm_client)
+            
+            self.statusBar().showMessage(f"LLM Parameters updated: Temperature={temp}, Top-P={top_p}", 3000)
+
     def _on_configure_api_key(self):
         """Open the API key configuration dialog."""
         dialog = APIKeyDialog(self)
-        # Run the dialog; after it closes, pick up the stored key and refresh
-        # the LLM configuration so cloud model selection can succeed.
         dialog.exec()
 
         try:
-            # Update the active LLM configuration
             if hasattr(self, "llm_config") and self.llm_config is not None:
-                # We need to refresh the key for the current model's provider
                 from llm.client import MODEL_MAPPING
                 model_config = MODEL_MAPPING.get(self.llm_config.model_key, {})
                 provider = model_config.get("provider", "local")
@@ -1149,29 +1172,21 @@ class TextEditor(QMainWindow):
                     self.llm_config.api_key = APIKeyManager.load_api_key(provider)
                 else:
                     self.llm_config.api_key = None
-
+                    
                 # Try to re-create the client so any errors surface immediately
                 try:
                     new_client = self.llm_config.create_client()
                     self.llm_client = new_client
                     if self.chat_panel:
                         self.chat_panel.add_system_message("API key configured. LLM client refreshed.")
-                    try:
-                        self.statusBar().showMessage("API key configured", 3000)
-                    except Exception:
-                        pass
+                    self.statusBar().showMessage("API key configured", 3000)
                 except Exception as e:
-                    # If creating the client fails (e.g., no API key for cloud model), keep
-                    # the previous client (if any) and inform the user via the chat panel
                     if self.chat_panel:
                         self.chat_panel.add_system_message(f"Failed to refresh LLM client: {e}")
-                    try:
-                        self.statusBar().showMessage(f"Failed to refresh LLM client: {e}", 5000)
-                    except Exception:
-                        pass
-        except Exception:
-            # Non-fatal: do not crash the settings dialog
-            pass
+                    self.statusBar().showMessage(f"Failed to refresh LLM client: {e}", 5000)
+        except Exception as e:
+            self.statusBar().showMessage(f"Error updating API key: {e}", 3000)
+
 
     # --- File operations ---
     def _should_index_file(self, file_path: str, max_size_kb: int = 100) -> bool:
@@ -1805,8 +1820,8 @@ def load_stylesheet(app, path):
     with open(path, "r") as f:
         app.setStyleSheet(f.read())
 
-
 if __name__ == "__main__":
+
     app = QApplication(sys.argv)
     load_stylesheet(app, "dark_theme.qss")
     editor = TextEditor()

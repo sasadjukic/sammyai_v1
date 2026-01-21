@@ -56,6 +56,8 @@ class LLMClient:
         self.provider = self.model_config["provider"]
         self.api_key = api_key
         self.system_prompt = system_prompt or SYSTEM_PROMPT
+        self.temperature = 0.9
+        self.top_p = 0.9
         
         # Validate cloud models have API key
         if self.model_type == ModelType.CLOUD and not self.api_key:
@@ -113,8 +115,8 @@ class LLMClient:
         messages: List[Dict[str, str]],
         on_token: Callable[[str], None],
         max_tokens: Optional[int] = None,
-        temperature: float = 0.9,
-        top_p: float = 0.9,
+        temperature: Optional[float] = None,
+        top_p: Optional[float] = None,
         include_system: bool = True
     ) -> str:
         """Stream chat using Ollama client."""
@@ -124,8 +126,8 @@ class LLMClient:
         try:
             # Build options dict
             options = {
-                "temperature": temperature,
-                "top_p": top_p,
+                "temperature": temperature if temperature is not None else self.temperature,
+                "top_p": top_p if top_p is not None else self.top_p,
             }
             if max_tokens:
                 options["num_predict"] = max_tokens
@@ -154,8 +156,8 @@ class LLMClient:
         messages: List[Dict[str, str]],
         on_token: Callable[[str], None],
         max_tokens: Optional[int] = None,
-        temperature: float = 0.9,
-        top_p: float = 0.9,
+        temperature: Optional[float] = None,
+        top_p: Optional[float] = None,
         include_system: bool = True
     ) -> str:
         """Stream chat using Google Gen AI SDK."""
@@ -165,8 +167,8 @@ class LLMClient:
             
             # Configure generation config
             config = {
-                "temperature": temperature,
-                "top_p": top_p,
+                "temperature": temperature if temperature is not None else self.temperature,
+                "top_p": top_p if top_p is not None else self.top_p,
                 "system_instruction": self.system_prompt
             }
             if max_tokens:
@@ -200,8 +202,8 @@ class LLMClient:
         self,
         messages: List[Dict[str, str]],
         max_tokens: Optional[int] = None,
-        temperature: float = 0.9,
-        top_p: float = 0.9,
+        temperature: Optional[float] = None,
+        top_p: Optional[float] = None,
         include_system: bool = True
     ) -> str:
         """
@@ -210,8 +212,8 @@ class LLMClient:
         Args:
             messages: List of message dicts with 'role' and 'content'
             max_tokens: Maximum tokens to generate (optional)
-            temperature: Sampling temperature (default: 0.9)
-            top_p: Top-p sampling parameter (default: 0.9)
+            temperature: Sampling temperature (None to use instance default)
+            top_p: Top-p sampling parameter (None to use instance default)
             include_system: Whether to include system prompt (default: True)
             
         Returns:
@@ -226,8 +228,8 @@ class LLMClient:
         self,
         messages: List[Dict[str, str]],
         max_tokens: Optional[int] = None,
-        temperature: float = 0.9,
-        top_p: float = 0.9,
+        temperature: Optional[float] = None,
+        top_p: Optional[float] = None,
         include_system: bool = True
     ) -> str:
         """Chat using Ollama client."""
@@ -236,8 +238,8 @@ class LLMClient:
         try:
             # Build options dict
             options = {
-                "temperature": temperature,
-                "top_p": top_p,
+                "temperature": temperature if temperature is not None else self.temperature,
+                "top_p": top_p if top_p is not None else self.top_p,
             }
             if max_tokens:
                 options["num_predict"] = max_tokens
@@ -259,8 +261,8 @@ class LLMClient:
         self,
         messages: List[Dict[str, str]],
         max_tokens: Optional[int] = None,
-        temperature: float = 0.9,
-        top_p: float = 0.9,
+        temperature: Optional[float] = None,
+        top_p: Optional[float] = None,
         include_system: bool = True
     ) -> str:
         """Chat using Google Gen AI SDK."""
@@ -270,8 +272,8 @@ class LLMClient:
             
             # Configure generation config
             config = {
-                "temperature": temperature,
-                "top_p": top_p,
+                "temperature": temperature if temperature is not None else self.temperature,
+                "top_p": top_p if top_p is not None else self.top_p,
                 "system_instruction": self.system_prompt
             }
             if max_tokens:
@@ -351,8 +353,8 @@ class LLMClient:
         messages: List[Dict[str, str]],
         on_token: Callable[[str], None],
         max_tokens: Optional[int] = None,
-        temperature: float = 0.9,
-        top_p: float = 0.9,
+        temperature: Optional[float] = None,
+        top_p: Optional[float] = None,
         include_system: bool = True
     ) -> str:
         """
@@ -362,8 +364,8 @@ class LLMClient:
             messages: List of message dicts with 'role' and 'content'
             on_token: Callback function called with each token
             max_tokens: Maximum tokens to generate (optional)
-            temperature: Sampling temperature (default: 0.9)
-            top_p: Top-p sampling parameter (default: 0.9)
+            temperature: Sampling temperature (None to use instance default)
+            top_p: Top-p sampling parameter (None to use instance default)
             include_system: Whether to include system prompt (default: True)
             
         Returns:
@@ -458,3 +460,11 @@ class LLMConfig:
             api_key=self.api_key,
             system_prompt=self.system_prompt
         )
+    
+    def apply_to_client(self, client: LLMClient):
+        """Update an existing client with current configuration."""
+        client.temperature = self.temperature
+        client.top_p = self.top_p
+        client.system_prompt = self.system_prompt
+        # Note: model_key and api_key would require re-initialization of the provider client
+        # which is handled by creating a new client if needed.
