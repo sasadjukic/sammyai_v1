@@ -20,7 +20,7 @@ Each story below was developed starting from a simple prompt or inspiration, wit
 | **Genre** | Drama |
 | **Inspiration** | Writer's Digest prompt: write a story where your character is sent back in time one year. |
 
-[📖 Read One Bad Year](file:///home/sasa/Desktop/Projects/sammyai_v1/documentation/6_STORIES/One_Bad_Year.md)
+[📖 Read One Bad Year](https://drive.google.com/file/d/1AxDfoiMaemM3qgOghZmeYoNzLEYKp6w_/view?usp=sharing)
 
 ---
 
@@ -38,7 +38,7 @@ Each story below was developed starting from a simple prompt or inspiration, wit
 | **Genre** | Surrealist Drama |
 | **Inspiration** | Writer's Digest prompt: write a piece that takes place during Yule. |
 
-[📖 Read God Jul](file:///home/sasa/Desktop/Projects/sammyai_v1/documentation/6_STORIES/God_Jul.md)
+[📖 Read God Jul](https://drive.google.com/file/d/1m54N8khzPs0_jJGbM5d-LU7owliDUi9o/view?usp=sharing)
 
 ---
 
@@ -56,7 +56,7 @@ Each story below was developed starting from a simple prompt or inspiration, wit
 | **Genre** | Drama |
 | **Inspiration** | Writer's Digest prompt: write about two people in a relationship who are yearning for different things. |
 
-[📖 Read Hidden Yearning](file:///home/sasa/Desktop/Projects/sammyai_v1/documentation/6_STORIES/Hidden_Yearning.md)
+[📖 Read Hidden Yearning](https://drive.google.com/file/d/1h1mZpQGpoTMZZb0zZvuFc8WcY-GW-X0J/view?usp=drive_link)
 
 ---
 
@@ -74,7 +74,7 @@ Each story below was developed starting from a simple prompt or inspiration, wit
 | **Genre** | Drama |
 | **Inspiration** | Writer's Digest prompt: write a flash piece that plays on the Greek myth of Echo. For today's prompt, reinvent this myth—or bring it into the present day. |
 
-[📖 Read Echo Echo](file:///home/sasa/Desktop/Projects/sammyai_v1/documentation/6_STORIES/Echo_Echo.md)
+[📖 Read Echo Echo](https://drive.google.com/file/d/1_dm_i0BC8W7AlWzYT4AMunPFPjlORPAf/view?usp=drive_link)
 
 ---
 
@@ -92,7 +92,7 @@ Each story below was developed starting from a simple prompt or inspiration, wit
 | **Genre** | Sci-Fi |
 | **Inspiration** | Writer's Digest prompt #140: write a short story of 650 words or fewer based on the photo from Andriy Onufriyenko. |
 
-[📖 Read The Seeker](file:///home/sasa/Desktop/Projects/sammyai_v1/documentation/6_STORIES/The_Seeker.md)
+[📖 Read The Seeker](https://drive.google.com/file/d/1WL0g0_XvhBpTL2mPdWvKXks8qXQepXiX/view?usp=drive_link)
 
 ---
 
