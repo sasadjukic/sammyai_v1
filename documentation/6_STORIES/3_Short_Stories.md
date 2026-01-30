@@ -14,13 +14,13 @@ These narratives often involve an iterative process, sometimes utilizing multipl
 
 | Metadata | Details |
 | :--- | :--- |
-| **Release Date** | TBD |
+| **Release Date** | January 30th, 2026 |
 | **Brainstorming Model** | Gemma3:4b |
 | **Writing Model** | Kimi-K2:1T, Gemma3:4b, Gemini-2.5-Flash |
 | **Genre** | Slapstick Comedy/Parody |
 | **Inspiration** | Superhero movies, particularly Batman |
 
-[📄 Story Bible](file:///home/sasa/Desktop/Projects/sammyai_v1/documentation/6_STORIES/RatMan_Bible.md) | [📖 Read RatMan](file:///home/sasa/Desktop/Projects/sammyai_v1/documentation/6_STORIES/RatMan.md)
+[📄 Story Bible](file:///home/sasa/Desktop/Projects/sammyai_v1/documentation/6_STORIES/RatMan_Bible.md) | [📖 Read RatMan](https://drive.google.com/file/d/1PKn7VzGY3TPtYnDCsvSCZt9AoXp5P3Ya/view?usp=sharing)
 
 ---
 
@@ -32,13 +32,13 @@ These narratives often involve an iterative process, sometimes utilizing multipl
 
 | Metadata | Details |
 | :--- | :--- |
-| **Release Date** | TBD |
+| **Release Date** | January 30th, 2026 |
 | **Brainstorming Model** | Gemma3:4b |
 | **Writing Model** | Kimi-K2:1T |
 | **Genre** | Comedy |
 | **Inspiration** | Pirates of the Caribbean, Monty Python, myth of El Dorado |
 
-[📄 Story Bible](file:///home/sasa/Desktop/Projects/sammyai_v1/documentation/6_STORIES/Zord_Bible.md) | [📖 Read Zord](file:///home/sasa/Desktop/Projects/sammyai_v1/documentation/6_STORIES/Zord.md)
+[📄 Story Bible](file:///home/sasa/Desktop/Projects/sammyai_v1/documentation/6_STORIES/Zord_Bible.md) | [📖 Read Zord](https://drive.google.com/file/d/1xUoD1jpPdniOWdV9gFNFn4FqLptCUb5p/view?usp=sharing)
 
 ---
 
@@ -50,13 +50,13 @@ These narratives often involve an iterative process, sometimes utilizing multipl
 
 | Metadata | Details |
 | :--- | :--- |
-| **Release Date** | TBD |
+| **Release Date** | January 30th, 2026 |
 | **Brainstorming Model** | Gemma3:4b |
 | **Writing Model** | Kimi-K2:1T |
 | **Genre** | Sci-Fi/Drama |
 | **Inspiration** | AI boom of 2025 |
 
-[📄 Story Bible](file:///home/sasa/Desktop/Projects/sammyai_v1/documentation/6_STORIES/Lyra_Bible.md) | [📖 Read Lyra](file:///home/sasa/Desktop/Projects/sammyai_v1/documentation/6_STORIES/Lyra.md)
+[📄 Story Bible](file:///home/sasa/Desktop/Projects/sammyai_v1/documentation/6_STORIES/Lyra_Bible.md) | [📖 Read Lyra](https://drive.google.com/file/d/1DsLBDSCy8XQcpc8UQv27t0Q13UsC98a7/view?usp=sharing)
 
 ---
 
