@@ -14,7 +14,7 @@ Each story below was developed starting from a simple prompt or inspiration, wit
 
 | Metadata | Details |
 | :--- | :--- |
-| **Release Date** | TBD |
+| **Release Date** | January 29th, 2026 |
 | **Brainstorming Model** | Gemini-2.5-Flash |
 | **Writing Model** | Gemini-2.5-Flash |
 | **Genre** | Drama |
@@ -32,7 +32,7 @@ Each story below was developed starting from a simple prompt or inspiration, wit
 
 | Metadata | Details |
 | :--- | :--- |
-| **Release Date** | TBD |
+| **Release Date** | January 29th, 2026 |
 | **Brainstorming Model** | Gemma3:4b |
 | **Writing Model** | Gemma3:4b |
 | **Genre** | Surrealist Drama |
@@ -50,7 +50,7 @@ Each story below was developed starting from a simple prompt or inspiration, wit
 
 | Metadata | Details |
 | :--- | :--- |
-| **Release Date** | TBD |
+| **Release Date** | January 28th, 2026 |
 | **Brainstorming Model** | Gemma3:4b |
 | **Writing Model** | Kimi-K2:1T |
 | **Genre** | Drama |
@@ -68,7 +68,7 @@ Each story below was developed starting from a simple prompt or inspiration, wit
 
 | Metadata | Details |
 | :--- | :--- |
-| **Release Date** | TBD |
+| **Release Date** | January 28th, 2026 |
 | **Brainstorming Model** | Gemma3:4b |
 | **Writing Model** | Gemma3:4b |
 | **Genre** | Drama |
@@ -86,7 +86,7 @@ Each story below was developed starting from a simple prompt or inspiration, wit
 
 | Metadata | Details |
 | :--- | :--- |
-| **Release Date** | TBD |
+| **Release Date** | January 28th, 2026 |
 | **Brainstorming Model** | Gemma3:4b |
 | **Writing Model** | Gemma3:4b |
 | **Genre** | Sci-Fi |
