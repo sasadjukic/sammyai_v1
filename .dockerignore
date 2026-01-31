@@ -1,0 +1,46 @@
+# Virtual Environment
+lib/
+lib64/
+bin/
+include/
+share/
+pyvenv.cfg
+env/
+venv/
+.venv/
+ENV/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Models and data (these will be downloaded at runtime)
+models/
+*.bin
+*.pt
+*.pth
+*.onnx
+*.h5
+*.safetensors
+
+# ChromaDB and Application Cache
+chroma_data/
+cache/
+*.db
+*.sqlite
+*.sqlite3
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs and temp files
+*.log
+logs/
+tmp/
+temp/
